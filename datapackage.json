@@ -22,7 +22,7 @@
   ],
   "resources": [
     {
-      "name": "positions",
+      "name": "markers",
       "path": "data/markers.csv",
       "schema": {
         "fields": [
