@@ -5,18 +5,18 @@
   "version": "0.1.0",
   "contributors": [
     {
-      "name": "Ethan Welty",
+      "title": "Ethan Welty",
       "email": "ethan.welty@gmail.com",
-      "roles": "Assembled and published the datapackage."
+      "role": "author"
     },
     {
-      "name": "Shad O'Neel",
-      "roles": "Performed the research and processed the data."
+      "title": "Shad O'Neel",
+      "role": "Performed the research and processed the data."
     }
   ],
   "sources": [
     {
-      "name": "Original data, scripts, and documentation",
+      "title": "Original data, scripts, and documentation",
       "path": "sources/"
     }
   ],
@@ -35,22 +35,25 @@
             "name": "t",
             "type": "datetime",
             "description": "Date and time (UTC).",
-            "format": "YYYY-MM-DD'T'hh:mm:ss'Z'"
+            "format": "%Y-%m-%dT%H:%M:%SZ"
           },
           {
             "name": "x",
             "type": "number",
-            "description": "Easting (m) in WGS84 UTM Zone 6N (EPSG:32606)."
+            "description": "Easting in WGS84 UTM Zone 6N (EPSG:32606).",
+            "unit": "m"
           },
           {
             "name": "y",
             "type": "number",
-            "description": "Northing (m) in WGS84 UTM Zone 6N (EPSG:32606)."
+            "description": "Northing in WGS84 UTM Zone 6N (EPSG:32606).",
+            "unit": "m"
           },
           {
             "name": "z",
             "type": "number",
-            "description": "Height (m) above the WGS84 ellipsoid."
+            "description": "Height above the WGS84 ellipsoid.",
+            "unit": "m"
           }
         ]
       }
