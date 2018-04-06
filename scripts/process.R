@@ -1,29 +1,21 @@
-# ---- Install missing dependencies ----
-
-packages <- c("readxl", "sp")
-if (length(setdiff(packages, rownames(installed.packages()))) > 0) {
-  install.packages(setdiff(packages, rownames(installed.packages())))
-}
-
 # ---- Load functions ----
 
 #' Convert 2005 Julian Day to Date Time
-#' 
+#'
 #' Conversion from julian day to date time checked against sources/data_reduction/surveys_reduced_6_05.xls. These are believed to be in local time (ADT, UTC-8): The times of large calving events (sources/coord_trans/big_calves_lines.txt, sources/coord_trans/biggest_events.txt) – plotted unaltered in sources/coord_trans/marker_tracklines.m – match those in the original calving observations (CG05_calving_obs.xls), which are in local time.
-#' 
+#'
 #' @param julian_day Julian day of 2005 in local time (ADT, UTC-8).
 #' @return ISO 8601 date time in UTC.
 #' @examples
-#' julian_day_to_datetime(153.9652778) == "2005-06-03T07:10:00Z"
+#' julian_day_to_datetime(153.9652778) # 2005-06-03 07:10:00
 julian_day_to_datetime <- function(julian_day) {
   utc_offset <- -8 * (60 * 60)
   origin <- strptime("2004-12-31 00:00:00", "%Y-%m-%d %H:%M:%S", tz = "UTC")
-  datetime <- format(as.POSIXlt(julian_day * (60 * 60 * 24) - utc_offset, tz = "UTC", origin = origin), "%Y-%m-%dT%H:%M:%SZ")
-  return(datetime)
+  as.POSIXct(julian_day * (60 * 60 * 24) - utc_offset, tz = "UTC", origin = origin)
 }
 
 #' Convert WGS84 Lng, Lat to UTM (Alaska, Zone 6N)
-#' 
+#'
 #' @param lnglat WGS84 geographic coordinates.
 #' @return WGS84 Zone 6N UTM coordinates.
 lnglat_to_utm <- function(lnglat) {
@@ -43,10 +35,9 @@ filenames <- c(
 )
 
 results <- lapply(filenames, function(filename) {
-  df <- read.table(filename)
-  # Assign columns (sources/coord_trans/survey_coord_trans.m)
-  names(df) <- c("marker", "t", "x", "y", "z")
-  return(df)
+  read.table(filename) %>%
+    # Assign columns (sources/coord_trans/survey_coord_trans.m)
+    set_names(c("marker", "t", "x", "y", "z"))
 })
 
 # ---- Marker 2 (June 2005) ----
@@ -54,7 +45,7 @@ results <- lapply(filenames, function(filename) {
 filename <- "sources/data_reduction/surveys_reduced_6_05.xls"
 temp <- readxl::read_excel(filename, sheet = "Sheet1", skip = 7)
 names(temp) <- make.names(names(temp), unique = TRUE)
-df <- temp[!is.na(temp$Marker) & temp$Marker == 222, c("Marker", "Tavg.1", "Ereduced", "Nreduced", "Z")]
+df <- temp[!is.na(temp$Marker) & temp$Marker == 222, c("Marker", "Tavg__1", "Ereduced", "Nreduced", "Z")]
 names(df) <- c("marker", "t", "x", "y", "z")
 results <- c(results, list(df))
 
@@ -121,4 +112,41 @@ df$z <- gun[3] - (gun_local[3] - df$z)
 
 # ---- Save results ----
 
-write.csv(df, "data/markers.csv", na = "", quote = FALSE, row.names = FALSE)
+resource <- df %>%
+  dplyr::transmute(
+    track = marker %>%
+      as.integer() %>%
+      dpkg::set_field(description = "Track identifier (marker #)"),
+    t = t %>%
+      dpkg::set_field(description = "Date and time (UTC)"),
+    x = x %>%
+      units::set_units("m") %>%
+      dpkg::set_field(description = "Easting (WGS84 UTM Zone 6N, EPSG:32606)"),
+    y = y %>%
+      units::set_units("m") %>%
+      dpkg::set_field(description = "Northing (WGS84 UTM Zone 6N, EPSG:32606)"),
+    z = z %>%
+      units::set_units("m") %>%
+      dpkg::set_field(description = "Elevation (height above the WGS84 ellipsoid)")
+  ) %>%
+  dpkg::set_resource(
+    name = "positions",
+    path = "data/positions.csv"
+  )
+
+dp <- list(resource) %>%
+  dpkg::set_package(
+    name = "optical-surveys-2005",
+    title = "Optical Surveys (2005)",
+    description = "Four survey targets (1, 2, 3, 4) were deployed in June 2005 and one (5) in September 2005, within one km of the calving face using a helicopter. The maximum lifetime of the markers was limited to 15 days, before each succumbed to calving. Positions of the targets were obtained using a Leica total station robotic survey theodolite at nominal time separation of 20-30 minutes.",
+    version = "0.1.0",
+    contributors = list(
+      dpkg::contributor("Ethan Welty", email = "ethan.welty@gmail.com", role = "author"),
+      dpkg::contributor("Shad O'Neel", role = "Performed the research and processed the data")
+    ),
+    sources = list(
+      dpkg::source("Original data, scripts, and documentation", path = "sources/")
+    )
+  )
+
+dpkg::write_package(dp)
